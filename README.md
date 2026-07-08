@@ -1,79 +1,104 @@
-# 👁 Infrared Palm Eye — Hand Visualiser
+# ◉ Infrared Palm Eye
 
-Real-time hand tracking with infrared/thermal aesthetic, palm eye animation, and live measurements streamed to a dark Material 3 web UI via FastAPI WebSocket.
-
-![Python](https://img.shields.io/badge/Python-3.10+-orange?style=flat-square&logo=python)
-![FastAPI](https://img.shields.io/badge/FastAPI-0.115-009688?style=flat-square&logo=fastapi)
-![MediaPipe](https://img.shields.io/badge/MediaPipe-0.10-FF6D00?style=flat-square)
-![License](https://img.shields.io/badge/License-MIT-blue?style=flat-square)
-
----
+Real-time hand visualiser. Your webcam feed is re-rendered in an infrared/thermal
+aesthetic, a mystical eye awakens in your palm centre after 2.5 seconds of
+steady presence, and live measurements stream to a sidebar. Runs entirely in
+the browser against a local FastAPI + WebSocket backend.
 
 ## Stack
 
-| Layer | Tech |
-|---|---|
-| Hand tracking | MediaPipe Hands |
-| Frame processing | OpenCV + NumPy |
-| Backend | FastAPI + WebSocket |
-| Frontend | HTML/CSS/JS — dark Material 3 |
-| Transport | JPEG frames streamed over WebSocket |
+| Layer    | Tech |
+|----------|------|
+| Backend  | FastAPI · WebSocket · MediaPipe Hands · OpenCV · NumPy |
+| Frontend | Vanilla HTML/CSS/JS · Material 3 dark · Rajdhani + Share Tech Mono |
 
----
-
-## Setup
-
-```bash
-git clone https://github.com/jaishakj/Infrared-thermal-palm-eye-Hand-Visualizer.git
-cd Infrared-thermal-palm-eye-Hand-Visualizer
-
-pip install -r requirements.txt
-
-uvicorn main:app --host 0.0.0.0 --port 8000
-```
-
-Open `http://localhost:8000` in your browser, click **CONNECT** — done.
-
----
-
-## Features
-
-- **Infrared thermal look** — `COLORMAP_HOT` blended with live camera feed
-- **Hand skeleton** — glowing blue-orange MediaPipe landmark overlay
-- **Topographic contour lines** — concentric hull offsets around the hand
-- **Palm eye** — appears after 2.5s of continuous hand presence, fades in with pulsing iris + spokes
-- **Eye awakening progress bar** — countdown shown in the browser UI
-- **Palm area (cm²)** — real-time convex polygon area calibrated to avg palm width
-- **Joint angles (°)** — PIP joint angle per finger, color-coded (green=extended, yellow=mid, red=bent)
-- **FPS counter** — live frame rate in top bar
-
----
-
-## File Structure
+## Structure
 
 ```
-├── main.py          ← FastAPI server + WebSocket + all CV/ML logic
-├── index.html       ← Dark M3 frontend (served by FastAPI at /)
-├── requirements.txt
+infrared-palm-eye/
+├── backend/
+│   ├── main.py              # FastAPI app + WS stream + serves frontend
+│   ├── tracker.py           # MediaPipe hand detection + presence timer
+│   ├── renderer.py          # OpenCV thermal/hull/skeleton/eye pipeline
+│   ├── measurements.py      # Palm area cm² + PIP joint angles °
+│   └── requirements.txt
+├── frontend/
+│   ├── index.html
+│   ├── style.css            # M3 dark tokens + grid layout + scanlines
+│   └── app.js               # WS manager, canvas renderer, UI updater
 └── README.md
 ```
 
----
+## Run
 
-## Calibration
-
-Default palm width reference: **8.5 cm** (average adult). Change line in `main.py`:
-
-```python
-HAND_REAL_WIDTH_CM = 8.5  # update to your actual palm width
+```bash
+cd backend
+pip install -r requirements.txt   # or: pip install fastapi uvicorn mediapipe opencv-python numpy websockets
+uvicorn main:app --port 8000
+# open http://localhost:8000
 ```
 
----
+Click **CONNECT** (the URL auto-fills from the current host), show your palm,
+hold it steady for 2.5 s, and the eye opens.
 
-## Controls (browser)
+## How it works
 
-| Action | Result |
-|---|---|
-| Click **CONNECT** | Start WebSocket stream |
-| Click **DISCONNECT** | Stop stream |
-| Edit WS URL field | Point to remote server |
+### WebSocket payload (`/ws`, per frame)
+
+```json
+{
+  "frame": "<base64 JPEG q=82>",
+  "fps": 29.4,
+  "hand_present": true,
+  "hand_timer": 1.84,
+  "eye_alpha": 0.72,
+  "measurements": {
+    "palm_area_cm2": 42.3,
+    "joint_angles": { "THUMB": 162, "INDEX": 171, "MIDDLE": 168, "RING": 155, "PINKY": 143 }
+  }
+}
+```
+
+### Render pipeline (backend, per frame)
+
+1. **Thermal base** — `COLORMAP_HOT` on the equalised grayscale, blended
+   75/25 with the raw frame.
+2. **Hull echoes** — convex hull of the 21 landmarks, redrawn at outward
+   offsets of 4 / 8 / 14 / 20 px.
+3. **Skeleton** — MediaPipe hand connections drawn twice: a thick soft glow
+   pass, then a thin bright line pass. Fingertip joints in orange.
+4. **The eye** — composited at `eye_alpha`. Iris pulses at 2.5 Hz, 18 radial
+   spokes rotate slowly, upper/lower eyelid arcs frame the ring.
+
+**Eye placement** — centre is the mean of landmarks `[0, 5, 9, 13, 17]`
+(wrist + four MCP knuckles). Radius = `dist(wrist, middle_MCP) × 0.35`,
+clamped to 20–80 px. The eye only appears after `hand_timer ≥ 2.5 s`, then
+fades in with a smoothstep over ~0.6 s.
+
+### Measurements
+
+- **px→cm calibration** — `dist(wrist, index_MCP) × 1.8` is assumed equal to
+  a real hand width of **8.5 cm**, so scale adapts with distance from camera.
+- **Palm area** — shoelace area of the convex hull polygon, converted to cm².
+- **Joint angles** — interior angle at each finger's PIP joint via the dot
+  product of the MCP→PIP and TIP→PIP vectors. Straight finger ≈ 180°.
+
+### Frontend
+
+- CSS grid: top bar / camera canvas + sidebar / footer.
+- Sidebar cards: **Connection** (URL input + connect button, status dot) →
+  **Eye status** (dormant / awakening progress arc / active glow) →
+  **Palm area** (big mono number) → **Joint angles** (5 rows with animated
+  fill bars, colour-coded ≥150° green · 90–149° amber · <90° red).
+- Frames arrive as base64 JPEG and are painted to `<canvas>` via `drawImage`,
+  throttled to one draw per animation frame. Scanline overlay via `::after`.
+- WS auto-reconnect with exponential backoff: 1 → 2 → 4 → 8 → 30 s max.
+
+## Notes & tuning
+
+- `HAND_REAL_WIDTH_CM` in `measurements.py` — set to your actual palm width
+  for more accurate cm² readings.
+- `CAM_INDEX` / resolution in `main.py` if you have multiple cameras.
+- The presence timer has a 0.35 s grace window so a single dropped detection
+  frame doesn't reset the awakening sequence.
+- The frame is mirrored (`cv2.flip(frame, 1)`) for natural interaction.
