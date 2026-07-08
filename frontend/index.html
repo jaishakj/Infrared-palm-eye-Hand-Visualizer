@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Infrared Palm Eye</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=Share+Tech+Mono&display=swap"
+    rel="stylesheet"
+  />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="app">
+
+    <!-- ─── Top bar ─────────────────────────────────────── -->
+    <header class="topbar">
+      <div class="brand">
+        <span class="brand-glyph" aria-hidden="true">◉</span>
+        <h1>INFRARED PALM EYE</h1>
+      </div>
+      <div class="topbar-stats">
+        <div class="stat">
+          <span class="stat-label">FPS</span>
+          <span class="stat-value mono" id="stat-fps">--.-</span>
+        </div>
+        <div class="stat">
+          <span class="stat-label">HAND</span>
+          <span class="stat-value mono" id="stat-hand">NO</span>
+        </div>
+        <div class="stat">
+          <span class="stat-label">TIMER</span>
+          <span class="stat-value mono" id="stat-timer">0.00s</span>
+        </div>
+      </div>
+    </header>
+
+    <!-- ─── Camera canvas ───────────────────────────────── -->
+    <main class="stage">
+      <div class="canvas-frame" id="canvas-frame">
+        <canvas id="feed" width="960" height="540"></canvas>
+        <div class="stage-overlay" id="stage-overlay">
+          <p class="overlay-title">NO SIGNAL</p>
+          <p class="overlay-hint">Connect to the tracker to begin the feed.</p>
+        </div>
+      </div>
+    </main>
+
+    <!-- ─── Sidebar ─────────────────────────────────────── -->
+    <aside class="sidebar">
+
+      <!-- Connection card -->
+      <section class="card" id="card-connection">
+        <h2 class="card-title">CONNECTION</h2>
+        <div class="conn-row">
+          <input
+            type="text"
+            id="ws-url"
+            class="mono"
+            value="ws://localhost:8000/ws"
+            spellcheck="false"
+            aria-label="WebSocket URL"
+          />
+        </div>
+        <div class="conn-row">
+          <button id="btn-connect" class="btn-primary">CONNECT</button>
+          <span class="conn-state" id="conn-state">
+            <span class="dot" id="conn-dot"></span>
+            <span id="conn-label">OFFLINE</span>
+          </span>
+        </div>
+      </section>
+
+      <!-- Eye status card -->
+      <section class="card" id="card-eye">
+        <h2 class="card-title">EYE STATUS</h2>
+        <div class="eye-widget">
+          <svg viewBox="0 0 120 120" class="eye-svg" aria-hidden="true">
+            <circle class="eye-track" cx="60" cy="60" r="50" />
+            <circle class="eye-arc" id="eye-arc" cx="60" cy="60" r="50" />
+            <circle class="eye-core" id="eye-core" cx="60" cy="60" r="18" />
+          </svg>
+          <div class="eye-readout">
+            <span class="eye-phase mono" id="eye-phase">DORMANT</span>
+            <span class="eye-sub" id="eye-sub">Show a palm to the lens</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- Palm area card -->
+      <section class="card" id="card-area">
+        <h2 class="card-title">PALM AREA</h2>
+        <div class="area-readout">
+          <span class="area-value mono" id="area-value">--.-</span>
+          <span class="area-unit">cm²</span>
+        </div>
+      </section>
+
+      <!-- Joint angles card -->
+      <section class="card" id="card-joints">
+        <h2 class="card-title">JOINT ANGLES · PIP</h2>
+        <div class="joint-list" id="joint-list">
+          <!-- rows injected by app.js -->
+        </div>
+      </section>
+
+    </aside>
+
+    <!-- ─── Footer ──────────────────────────────────────── -->
+    <footer class="footer">
+      <span class="mono">MEDIAPIPE HANDS · COLORMAP_HOT 75/25 · WS STREAM</span>
+      <span class="mono" id="footer-clock">--:--:--</span>
+    </footer>
+
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
